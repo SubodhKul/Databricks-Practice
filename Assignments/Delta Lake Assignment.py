@@ -21,10 +21,35 @@ sale_df = spark.read \
 
 # COMMAND ----------
 
+display(sale_df)
+
+# COMMAND ----------
+
 from pyspark.sql.functions import *
-sale_df_new = sale_df.withColumn("date", from_unixtime(col("date").cast("string")[0:8])) \
-    .withColumn('Quarter',quarter(from_unixtime(col('quarter')))) \
-    .withColumn("Quarter",concat(year('Date'),lit("Q"),col("Quarter")))
+sale_df_new = sale_df.withColumn("date", to_date(from_unixtime(col("date")/1e9))) \
+    .withColumn('Quarter',quarter('date')) \
+    .withColumn("Quarter",concat(year('date'),lit("Q"),col("Quarter")))
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC create database if not exists DRH_Records;
+
+# COMMAND ----------
+
+display(sale_df_new)
+
+# COMMAND ----------
+
+sale_df.write \
+    .format("parquet") \
+    .partitionBy("region") \
+    .mode("overwrite") \
+    .save("/mnt/danishdata/parquet")
+
+# COMMAND ----------
+
+sale_df.write.format("delta").mode("overwrite").option("path","/mnt/danishdata/").saveAsTable("DRH_Records.salesdeltatable")
 
 # COMMAND ----------
 
